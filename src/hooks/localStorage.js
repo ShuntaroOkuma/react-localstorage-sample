@@ -1,28 +1,52 @@
 import { useState, useEffect } from "react";
 
-export const useLocalStorage = (key, initialValue) => {
-  // useStateに関数を渡すことで、ローカルストレージの値を取得
+function useLocalStorage(key, initialValue) {
+  // 初期値を設定
   const [storedValue, setStoredValue] = useState(() => {
     try {
-      const item = localStorage.getItem(key);
-      return item ? item : initialValue;
+      // localStorageから値を取得
+      const item = window.localStorage.getItem(key);
+      // 値が存在する場合はパースして返す、そうでなければ初期値を返す
+      return item ? JSON.parse(item) : initialValue;
     } catch (error) {
+      // エラーが発生した場合は、初期値を返す
       console.log(error);
       return initialValue;
     }
   });
 
-  // localStorageのkeyかvalueが変更された時に、localStorageを更新
-  useEffect(() => {
+  // 値を更新する関数
+  const setValue = (value) => {
     try {
-      localStorage.setItem(key, storedValue);
+      // 値をセット
+      setStoredValue(value);
+      // localStorageに値を保存
+      window.localStorage.setItem(key, JSON.stringify(value));
     } catch (error) {
       console.log(error);
     }
-    return () => {
-      localStorage.removeItem(key);
-    };
-  }, [key, storedValue]);
+  };
 
-  return [storedValue, setStoredValue];
-};
+  useEffect(() => {
+    // localStorageの変更を検知するイベントリスナーを設定
+    const handleStorageChange = () => {
+      try {
+        const item = window.localStorage.getItem(key);
+        setStoredValue(item ? JSON.parse(item) : initialValue);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    // コンポーネントのアンマウント時にイベントリスナーを削除
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [key, initialValue]);
+
+  return [storedValue, setValue];
+}
+
+export default useLocalStorage;
